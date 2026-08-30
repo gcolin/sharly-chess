@@ -4,6 +4,18 @@
 <div class="row gy-2 gx-3">
     <div class="col-12">
         {{ admin_macros.text_input(
+            name='chessevent_server_url',
+            label=_('ChessEvent server URL:'),
+            placeholder=_('E.g.: %(string)s', string='http://localhost:8080/chessevent'),
+            disabled=not client.can_update_event,
+            data=data, errors=errors
+        ) }}
+        <div class="form-text">
+            {{ _('ChessEvent API base URL. The /download endpoint is appended automatically unless already present. Leave empty for the official ChessEvent server.') }}
+        </div>
+    </div>
+    <div class="col-12">
+        {{ admin_macros.text_input(
             name='chessevent_event_id',
             label=_('ChessEvent event:'),
             placeholder=_('E.g.: %(string)s', string='BRE_35_domloupfide36'),

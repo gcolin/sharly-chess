@@ -116,8 +116,11 @@ class ChessEventTournamentImporter(TournamentImporter):
     @staticmethod
     def _get_chessevent_tournament(
         request_data: ChessEventTournamentRequestData,
+        download_url: str,
     ) -> ChessEventTournament:
-        chessevent_data = ChessEventSession().read_tournament_data(request_data)
+        chessevent_data = ChessEventSession(download_url).read_tournament_data(
+            request_data
+        )
         try:
             chessevent_tournament = dict_to_dataclass(
                 ChessEventTournament, json.loads(chessevent_data)
@@ -171,7 +174,8 @@ class ChessEventTournamentImporter(TournamentImporter):
         self, event: Event, stored_tournament: StoredTournament | None = None
     ) -> tuple[StoredTournament, list[StoredPlayer]]:
         request_data = self._resolve_request_data(event)
-        tournament = self._get_chessevent_tournament(request_data)
+        download_url = ChessEventUtils.resolve_download_url(event)
+        tournament = self._get_chessevent_tournament(request_data, download_url)
         stored_tournament = self._read_chessevent_tournament(
             tournament, stored_tournament
         )

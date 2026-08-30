@@ -156,6 +156,16 @@ class ChessEventPlugin(Plugin):
         if chessevent_user_id and not chessevent_password:
             errors[field] = _('Please enter a password for the ChessEvent connection.')
 
+        chessevent_server_url = WebContext.form_data_to_str(
+            data, field := 'chessevent_server_url'
+        )
+        if chessevent_server_url and not chessevent_server_url.startswith(
+            ('http://', 'https://')
+        ):
+            errors[field] = _(
+                'Please enter a valid ChessEvent server URL (http:// or https://).'
+            )
+
     # ---------------------------------------------------------------------------------
     # Tournaments
     # ---------------------------------------------------------------------------------

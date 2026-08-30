@@ -31,7 +31,9 @@ class ChessEventSession(Session):
     """A Requests session specialised for communication with
     the ChessEvent platform."""
 
-    DOWNLOAD_URL: str = 'https://chessevent.echecs-bretagne.fr/download'
+    def __init__(self, download_url: str):
+        super().__init__()
+        self.download_url = download_url
 
     def read_tournament_data(
         self, request_data: ChessEventTournamentRequestData
@@ -48,14 +50,14 @@ class ChessEventSession(Session):
         try:
             # Redirections are handled manually to pass the data at each redirection
             response: Response = self.post(
-                self.DOWNLOAD_URL, data=post, allow_redirects=False
+                self.download_url, data=post, allow_redirects=False
             )
             while response.status_code in [301, 302]:
                 redirect_url = response.headers['location']
                 logger.debug('Redirection to  %s...', redirect_url)
                 response = self.post(redirect_url, data=post, allow_redirects=False)
         except RequestException as ex:
-            logger.error('Failed to read [%s]: %s.', self.DOWNLOAD_URL, ex)
+            logger.error('Failed to read [%s]: %s.', self.download_url, ex)
             raise ChessEventStatusError(
                 _('Connection to the ChessEvent server failed.'),
                 ConnectionErrorChessEventStatus(),

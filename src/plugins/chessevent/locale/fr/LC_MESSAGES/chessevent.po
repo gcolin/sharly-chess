@@ -188,6 +188,15 @@ msgstr "défini dans l'évènement"
 msgid "my_password"
 msgstr "mon_mot_de_passe"
 
+msgid "ChessEvent server URL:"
+msgstr "URL du serveur ChessEvent :"
+
+msgid "ChessEvent API base URL. The /download endpoint is appended automatically unless already present. Leave empty for the official ChessEvent server."
+msgstr "URL de base de l'API ChessEvent. Le suffixe /download est ajouté automatiquement s'il est absent. Laissez vide pour le serveur ChessEvent officiel."
+
+msgid "Please enter a valid ChessEvent server URL (http:// or https://)."
+msgstr "Merci de saisir une URL de serveur ChessEvent valide (http:// ou https://)."
+
 msgid "{count} tournament ignored"
 msgid_plural "{count} tournaments ignored"
 msgstr[0] "{count} tournoi ignoré"
