@@ -13,6 +13,7 @@ from common.exception import (
     ImporterError,
 )
 from common.i18n import _
+from common.logger import get_logger
 from common.sharly_chess_config import SharlyChessConfig
 from data.event import Event
 from data.input_output import TournamentImporter
@@ -56,6 +57,8 @@ from plugins.ffe.ffe import FfePlugin
 from plugins.ffe.utils import FfePlayerPluginData
 from plugins.manager import plugin_manager
 from utils.enum import TournamentRating, Result
+
+logger = get_logger()
 
 paris_tz = zoneinfo.ZoneInfo('Europe/Paris')
 epoch = datetime(1970, 1, 1, tzinfo=zoneinfo.ZoneInfo('UTC'))
@@ -161,7 +164,15 @@ class ChessEventTournamentImporter(TournamentImporter):
     ) -> tuple[StoredTournament, list[StoredPlayer]]:
         request_data = self._resolve_request_data(event)
         download_url = ChessEventUtils.resolve_download_url(event)
+        download_started = time.perf_counter()
         tournament = self._get_chessevent_tournament(request_data, download_url)
+        logger.info(
+            'Ticketchess download+parse done in %.0f ms tournament=[%s] players=%d',
+            (time.perf_counter() - download_started) * 1000,
+            request_data.tournament_name,
+            len(tournament.players),
+        )
+        map_started = time.perf_counter()
         stored_tournament = self._read_chessevent_tournament(
             tournament, stored_tournament
         )
@@ -190,6 +201,12 @@ class ChessEventTournamentImporter(TournamentImporter):
             stored_players.append(stored_player)
             stored_tournament.stored_tournament_players.append(stored_tournament_player)
 
+        logger.info(
+            'Ticketchess map players/hooks done in %.0f ms tournament=[%s] players=%d',
+            (time.perf_counter() - map_started) * 1000,
+            request_data.tournament_name,
+            len(stored_players),
+        )
         return stored_tournament, stored_players
 
     @staticmethod

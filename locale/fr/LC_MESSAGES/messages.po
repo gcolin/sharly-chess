@@ -1496,9 +1496,6 @@ msgstr "ADJ"
 msgid "DD/MM/YYYY"
 msgstr "JJ/MM/AAAA"
 
-msgid "DMG does not contain exactly one folder as expected."
-msgstr "Le DMG ne contient pas un unique dossier comme attendu."
-
 msgid "DOUBLE"
 msgstr "DOUBLE"
 
@@ -1681,9 +1678,6 @@ msgstr "Confrontation directe"
 msgid "Director:"
 msgstr "Directeur·ice :"
 
-msgid "Directory [{folder}] already exists."
-msgstr "Le dossier [{folder}] existe déjà."
-
 msgid "Disabled"
 msgstr "Désactivé"
 
@@ -1742,9 +1736,6 @@ msgstr "Voulez-vous installer des bases d'évènement d'exemple"
 msgid "Do you want to recover the data of release [{version}]"
 msgstr "Voulez-vous récupérer les données de la version [{version}]"
 
-msgid "Do you want to upgrade from [{old_version}] to [{new_version}]"
-msgstr "Voulez-vous faire la mise à jour de [{old_version}] à [{new_version}]"
-
 msgid "Document:"
 msgstr "Document :"
 
@@ -1777,9 +1768,6 @@ msgstr "Télécharger les vCards des joueur·euses (format VCF). Attention: les 
 
 msgid "Download tournament fees"
 msgstr "Télécharger les droits d'homologation"
-
-msgid "Downloading failed with code [{code}]."
-msgstr "Le téléchargement a échoué avec le code [{code}]."
 
 msgid "Drag the sets to order them."
 msgstr "Faites glisser les ensembles pour les ordonner."
@@ -2201,12 +2189,6 @@ msgstr "MF"
 
 msgid "FORFEIT"
 msgstr "FORFAIT"
-
-msgid "Failed to process DMG file: [{ex}]."
-msgstr "Échec du traitement du fichier DMG : [{ex}]."
-
-msgid "Failed to read [{download_url}]: [{ex}]."
-msgstr "Échec de la lecture de [{download_url}] : [{ex}]."
 
 msgid "Families"
 msgstr "Familles"
@@ -2685,9 +2667,6 @@ msgstr "Installer"
 
 msgid "Installation of [{lib}] failed."
 msgstr "L'installation de la bibliothèque [{lib}] a échoué."
-
-msgid "Installation of release [{version}] failed, exiting."
-msgstr "L'nstallation de la version [{version}] a échoué, abandon."
 
 msgid "Installed [{lib}]."
 msgstr "La bibliothèque [{lib}] a été installée."
@@ -3427,9 +3406,6 @@ msgstr "Aucun événement public."
 msgid "No public screens"
 msgstr "Aucun écran public"
 
-msgid "No response from GitHub."
-msgstr "Pas de réponse de GitHub."
-
 msgid "No result"
 msgstr "Pas de résultat"
 
@@ -4098,9 +4074,6 @@ msgstr "Veuillez entrer l'URL de l'image."
 msgid "Please enter the name of the event."
 msgstr "Veuillez entrer le nom de l'évènement."
 
-msgid "Please launch the new version."
-msgstr "Veuillez lancer la nouvelle version."
-
 msgid "Please select a type of criterion."
 msgstr "Veuillez choisir un type de critère."
 
@@ -4405,9 +4378,6 @@ msgstr "Actualiser"
 
 msgid "Refresh this page."
 msgstr "Actualiser la page."
-
-msgid "Release {version} has been installed in [{folder}]."
-msgstr "La nouvelle version {version} a été installée dans [{folder}]."
 
 msgid "Reload the page"
 msgstr "Recharger la page"
@@ -4916,9 +4886,6 @@ msgstr "Somalie"
 
 msgid "Some accounts can have very high access levels, making them dangerous in the hands of an unaware or malicious users."
 msgstr "Certains comptes peuvent avoir des niveaux d'accès très élevés, les rendant dangereux dans les mains de personnes non-informées ou malveillantes."
-
-msgid "Some files are missing."
-msgstr "Des fichiers sont manquants."
 
 msgid "Something went wrong. Please ask your administrator to recreate your account."
 msgstr "Une erreur est survenue. Veuillez demander à votre administrateur⋅ice de recréer votre compte."
@@ -5822,9 +5789,6 @@ msgstr "Non définis"
 msgid "Undefined *** SINGULAR"
 msgstr "Non défini"
 
-msgid "Unexpected error during installation: [{ex}]."
-msgstr "Erreur inattendue pendant l’installation : [{ex}]."
-
 #, python-format
 msgid "Unique ID: %(uniq_id)s"
 msgstr "Identifiant unique : %(uniq_id)s"
@@ -6607,4 +6571,40 @@ msgstr "½ - 0 (NC)"
 
 msgid "½ - ½ (U)"
 msgstr "½ - ½ (NC)"
+
+#~ msgid "DMG does not contain exactly one folder as expected."
+#~ msgstr "Le DMG ne contient pas un unique dossier comme attendu."
+
+#~ msgid "Directory [{folder}] already exists."
+#~ msgstr "Le dossier [{folder}] existe déjà."
+
+#~ msgid "Do you want to upgrade from [{old_version}] to [{new_version}]"
+#~ msgstr "Voulez-vous faire la mise à jour de [{old_version}] à [{new_version}]"
+
+#~ msgid "Downloading failed with code [{code}]."
+#~ msgstr "Le téléchargement a échoué avec le code [{code}]."
+
+#~ msgid "Failed to process DMG file: [{ex}]."
+#~ msgstr "Échec du traitement du fichier DMG : [{ex}]."
+
+#~ msgid "Failed to read [{download_url}]: [{ex}]."
+#~ msgstr "Échec de la lecture de [{download_url}] : [{ex}]."
+
+#~ msgid "Installation of release [{version}] failed, exiting."
+#~ msgstr "L'nstallation de la version [{version}] a échoué, abandon."
+
+#~ msgid "No response from GitHub."
+#~ msgstr "Pas de réponse de GitHub."
+
+#~ msgid "Please launch the new version."
+#~ msgstr "Veuillez lancer la nouvelle version."
+
+#~ msgid "Release {version} has been installed in [{folder}]."
+#~ msgstr "La nouvelle version {version} a été installée dans [{folder}]."
+
+#~ msgid "Some files are missing."
+#~ msgstr "Des fichiers sont manquants."
+
+#~ msgid "Unexpected error during installation: [{ex}]."
+#~ msgstr "Erreur inattendue pendant l’installation : [{ex}]."
 

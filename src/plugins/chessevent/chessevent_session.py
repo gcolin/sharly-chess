@@ -1,3 +1,4 @@
+import time
 from dataclasses import dataclass, field
 from logging import Logger
 from urllib.parse import urlparse, urlunparse
@@ -110,6 +111,16 @@ class ChessEventSession(Session):
         headers = {}
         if bearer_token:
             headers['Authorization'] = f'Bearer {bearer_token}'
+        tournament_name = post.get('tournament_name', '')
+        label = (
+            f'{event_id}/[{tournament_name}]' if tournament_name else f'{event_id}'
+        )
+        logger.info(
+            'Ticketchess HTTP POST start url=[%s] event=[%s]',
+            url,
+            label,
+        )
+        started = time.perf_counter()
         try:
             response: Response = self.post(
                 url, data=post, headers=headers, allow_redirects=False
@@ -121,12 +132,28 @@ class ChessEventSession(Session):
                     redirect_url, data=post, headers=headers, allow_redirects=False
                 )
         except RequestException as ex:
-            logger.error('Failed to read [%s]: %s.', url, ex)
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            logger.error(
+                'Ticketchess HTTP POST failed after %.0f ms url=[%s] event=[%s]: %s',
+                elapsed_ms,
+                url,
+                label,
+                ex,
+            )
             raise ChessEventStatusError(
                 _('Connection to the ChessEvent server failed.'),
                 ConnectionErrorChessEventStatus(),
             )
+        elapsed_ms = (time.perf_counter() - started) * 1000
         data: str = response.content.decode()
+        logger.info(
+            'Ticketchess HTTP POST done in %.0f ms status=%d bytes=%d url=[%s] event=[%s]',
+            elapsed_ms,
+            response.status_code,
+            len(response.content),
+            url,
+            label,
+        )
         if response.status_code == 200:
             return data
         logger.error(

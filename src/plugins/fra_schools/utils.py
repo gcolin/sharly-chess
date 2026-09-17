@@ -1,15 +1,23 @@
 import re
 from dataclasses import dataclass, asdict
 from functools import partial, cached_property
-from typing import Self, Any, Counter, Collection
+from logging import Logger
+from typing import Self, Any, Counter, Collection, TYPE_CHECKING
 
+from common.logger import get_logger
 from data.event import Player, Event
 from database.sqlite.event.event_database import EventDatabase
 from plugins.fra_schools import PLUGIN_NAME
 from plugins.utils import PluginUtils, PluginData
 from web.controllers.base_controller import WebContext
 
+if TYPE_CHECKING:
+    from data.input_output import TournamentImporter
+    from data.tournament import Tournament
+    from plugins.fra_schools.fra_schools_database import FRASchoolsDatabase
+
 get_data = partial(PluginUtils.get_plugin_data, PLUGIN_NAME)
+logger: Logger = get_logger()
 
 
 @dataclass
@@ -207,6 +215,91 @@ class FRASchoolsPlayerPluginData(PluginData):
                 'fra_school': self.fra_school_id,
             }
         )
+
+
+class FRASchoolsImportLookup:
+    """Reuse one FRA schools DB connection and cache lookups during an import."""
+
+    _ATTR = '_fra_schools_import_lookup'
+
+    def __init__(self):
+        self._school_id_by_code: dict[str, int | None] = {}
+        self._db: 'FRASchoolsDatabase | None' = None
+        self._db_available: bool | None = None
+
+    @classmethod
+    def for_importer(cls, importer: 'TournamentImporter') -> Self:
+        lookup = getattr(importer, cls._ATTR, None)
+        if lookup is None:
+            lookup = cls()
+            setattr(importer, cls._ATTR, lookup)
+            importer.post_import_task.append(lookup.close_task)
+        return lookup
+
+    def close_task(self, _tournament: 'Tournament | None' = None):
+        self.close()
+
+    def close(self):
+        if self._db is not None:
+            self._db.__exit__(None, None, None)
+            self._db = None
+
+    def _ensure_db(self) -> 'FRASchoolsDatabase | None':
+        if self._db_available is False:
+            return None
+        if self._db is not None:
+            return self._db
+        from plugins.fra_schools.fra_schools_database import FRASchoolsDatabase
+
+        if not FRASchoolsDatabase.file_path().exists():
+            self._db_available = False
+            return None
+        self._db = FRASchoolsDatabase()
+        self._db.__enter__()
+        self._db_available = True
+        return self._db
+
+    def resolve_school_id(
+        self,
+        event: Event,
+        importer: 'TournamentImporter',
+        school_code: str,
+        *,
+        last_name: str,
+        first_name: str,
+    ) -> int | None:
+        if school_code in self._school_id_by_code:
+            return self._school_id_by_code[school_code]
+
+        plugin_data = FRASchoolsUtils.get_event_plugin_data(event)
+        school_id = next(
+            (s.id for s in plugin_data.fra_schools if s.code == school_code),
+            None,
+        )
+        if school_id:
+            self._school_id_by_code[school_code] = school_id
+            return school_id
+
+        db = self._ensure_db()
+        if db is None:
+            self._school_id_by_code[school_code] = None
+            return None
+
+        school = db.get_school_by_code(school_code)
+        if not school:
+            logger.warning(
+                'Player [%s %s] - No school found for code [%s] (ignored).',
+                last_name,
+                first_name,
+                school_code,
+            )
+            self._school_id_by_code[school_code] = None
+            return None
+
+        importer.stored_event_modified = True
+        school_id = FRASchoolsUtils.add_event_school(event, school, save=False)
+        self._school_id_by_code[school_code] = school_id
+        return school_id
 
 
 class FRASchoolsUtils:

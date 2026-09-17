@@ -1,5 +1,6 @@
 """Import a full Ticketchess event/collection into Sharly Chess via JWT."""
 
+import time
 from datetime import date
 from logging import Logger
 
@@ -84,11 +85,23 @@ class TicketchessEventImporter:
 
     def import_event(self) -> tuple[str, int, list[str]]:
         """Returns (uniq_id, imported_count, error_messages)."""
+        import_started = time.perf_counter()
         download_url = f'{self.chessevent_server_url.rstrip("/")}/download'
+        logger.info(
+            'Ticketchess import start event_id=[%s] server=[%s]',
+            self.event_id,
+            self.chessevent_server_url,
+        )
         session = ChessEventSession(download_url)
+        list_started = time.perf_counter()
         tournament_names = session.list_tournaments(
             event_id=self.event_id,
             bearer_token=self.jwt,
+        )
+        logger.info(
+            'Ticketchess list_tournaments done in %.0f ms count=%d',
+            (time.perf_counter() - list_started) * 1000,
+            len(tournament_names),
         )
         if not tournament_names:
             raise SharlyChessException(
@@ -97,24 +110,57 @@ class TicketchessEventImporter:
                 )
             )
 
+        create_started = time.perf_counter()
         uniq_id = self._create_event()
+        logger.info(
+            'Ticketchess create_event done in %.0f ms uniq_id=[%s]',
+            (time.perf_counter() - create_started) * 1000,
+            uniq_id,
+        )
         imported = 0
         errors: list[str] = []
-        for tournament_name in tournament_names:
+        for index, tournament_name in enumerate(tournament_names, start=1):
+            tournament_started = time.perf_counter()
+            logger.info(
+                'Ticketchess tournament %d/%d start name=[%s]',
+                index,
+                len(tournament_names),
+                tournament_name,
+            )
             try:
+                reload_started = time.perf_counter()
                 event = EventLoader().load_event(uniq_id)
+                logger.info(
+                    'Ticketchess pre-import EventLoader.load_event in %.0f ms',
+                    (time.perf_counter() - reload_started) * 1000,
+                )
                 importer = _JwtChessEventTournamentImporter(
                     self.event_id, tournament_name, self.jwt
                 )
                 importer.load_tournament(event)
                 imported += 1
+                logger.info(
+                    'Ticketchess tournament %d/%d done in %.0f ms name=[%s]',
+                    index,
+                    len(tournament_names),
+                    (time.perf_counter() - tournament_started) * 1000,
+                    tournament_name,
+                )
             except (ImporterError, ChessEventStatusError, SharlyChessException) as error:
                 logger.error(
-                    'Failed to import Ticketchess tournament [%s]: %s',
+                    'Failed to import Ticketchess tournament [%s] after %.0f ms: %s',
                     tournament_name,
+                    (time.perf_counter() - tournament_started) * 1000,
                     error,
                 )
                 errors.append(f'{tournament_name}: {error}')
+        logger.info(
+            'Ticketchess import finished in %.0f ms imported=%d errors=%d uniq_id=[%s]',
+            (time.perf_counter() - import_started) * 1000,
+            imported,
+            len(errors),
+            uniq_id,
+        )
         return uniq_id, imported, errors
 
     def _create_event(self) -> str:
