@@ -27,36 +27,6 @@ class ChessEventImporterOption(TournamentImporterOption, ABC):
         return self.sub_id()
 
 
-class ChessEventUserOption(ChessEventImporterOption):
-    @staticmethod
-    def sub_id() -> str:
-        return 'user'
-
-    @property
-    def type(self) -> type | UnionType:
-        return str | None
-
-    def get_default_value(self, tournament: Tournament | None = None) -> Any:
-        if not tournament:
-            return None
-        return ChessEventUtils.get_tournament_plugin_data(tournament).user
-
-
-class ChessEventPasswordOption(ChessEventImporterOption):
-    @staticmethod
-    def sub_id() -> str:
-        return 'password'
-
-    @property
-    def type(self) -> type | UnionType:
-        return str | None
-
-    def get_default_value(self, tournament: Tournament | None = None) -> Any:
-        if not tournament:
-            return None
-        return ChessEventUtils.get_tournament_plugin_data(tournament).password
-
-
 class ChessEventEventOption(ChessEventImporterOption):
     @staticmethod
     def sub_id() -> str:

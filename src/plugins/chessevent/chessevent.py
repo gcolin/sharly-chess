@@ -13,10 +13,10 @@ from database.sqlite.event.event_store import (
     StoredPlayer,
 )
 from plugins.chessevent import migrations, PLUGIN_NAME
-from plugins.chessevent.chessevent_controller import ChessEventController
+from plugins.chessevent.ticketchess_controller import TicketchessController
 from plugins.chessevent.tournament_importer.data import ChessEventPlayer
-from plugins.chessevent.tournament_importer.importer import ChessEventTournamentImporter
 from plugins.chessevent.utils import (
+    ChessEventConfigPluginData,
     ChessEventEventPluginData,
     ChessEventTournamentPluginData,
     ChessEventUtils,
@@ -40,10 +40,12 @@ class ChessEventPluginHooks:
         stored_player: StoredPlayer,
         chessevent_player: ChessEventPlayer,
     ):
-        """Augment player data when fetched from ChessEvent."""
+        """Augment player data when fetched from ChessEvent / Ticketchess."""
 
 
-class ChessEventPlugin(Plugin):
+class ChessEventPlugin(Plugin[ChessEventConfigPluginData]):
+    data_class = ChessEventConfigPluginData
+
     @staticmethod
     def static_id() -> str:
         return PLUGIN_NAME
@@ -59,8 +61,8 @@ class ChessEventPlugin(Plugin):
     @property
     def description(self) -> str:
         return _(
-            'Support for the ChessEvent platform used '
-            'for organising tournaments in France.'
+            'Import events and registrations from Ticketchess '
+            '(ChessEvent-compatible API).'
         )
 
     @property
@@ -101,15 +103,7 @@ class ChessEventPlugin(Plugin):
 
     @property
     def controllers(self) -> list[type[BaseController]]:
-        return [ChessEventController]
-
-    # ---------------------------------------------------------------------------------
-    # Input-Output
-    # ---------------------------------------------------------------------------------
-
-    @hookimpl
-    def insert_tournament_importers(self, importers: list[type[TournamentImporter]]):
-        importers.append(ChessEventTournamentImporter)
+        return [TicketchessController]
 
     # ---------------------------------------------------------------------------------
     # Events
@@ -125,7 +119,6 @@ class ChessEventPlugin(Plugin):
         event_database.update_stored_event(stored_event)
 
         for stored_tournament in stored_event.stored_tournaments:
-            # Clear all the chessevent data
             new_plugin_data = ChessEventTournamentPluginData()
             stored_tournament.plugin_data[PLUGIN_NAME] = (
                 new_plugin_data.to_stored_value()
@@ -144,17 +137,9 @@ class ChessEventPlugin(Plugin):
         data: dict[str, str],
         errors: dict[str, str],
     ):
-        federation = WebContext.form_data_to_str(data, field := 'federation')
+        federation = WebContext.form_data_to_str(data, 'federation')
         if federation != 'FRA':
-            # We only validate FFE fields for the FRA federation
             return
-
-        chessevent_user_id = WebContext.form_data_to_str(data, 'chessevent_user')
-        chessevent_password = WebContext.form_data_to_str(
-            data, field := 'chessevent_password'
-        )
-        if chessevent_user_id and not chessevent_password:
-            errors[field] = _('Please enter a password for the ChessEvent connection.')
 
         chessevent_server_url = WebContext.form_data_to_str(
             data, field := 'chessevent_server_url'
@@ -185,7 +170,3 @@ class ChessEventPlugin(Plugin):
         if not ChessEventUtils.resolve_tournament_name(tournament):
             return None
         return '/chessevent_tournament_card_connexion.html'
-
-    @hookimpl
-    def get_tournament_tab_action_menu_items_template(self) -> str:
-        return '/chessevent_tournament_tab_action_menu_items.html'

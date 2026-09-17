@@ -28,6 +28,9 @@
     {% if client.can_manage_events %}
         <div class="d-flex gap-2 ms-auto align-items-center">
             {% include 'create_event_button.html' %}
+            {% with admin_tab=admin_tab %}
+                {% include '/ticketchess_import_event_button.html' %}
+            {% endwith %}
         </div>
         <script>
             preparePrintModal()

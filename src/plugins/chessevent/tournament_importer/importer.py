@@ -74,14 +74,12 @@ class ChessEventTournamentImporter(TournamentImporter):
     def available_options() -> list[type[TournamentImporterOption]]:
         return [
             options.ChessEventEventOption,
-            options.ChessEventUserOption,
-            options.ChessEventPasswordOption,
             options.ChessEventTournamentOption,
         ]
 
     @property
     def modal_title(self) -> str:
-        return _('Import from ChessEvent')
+        return _('Import from Ticketchess')
 
     @property
     def doc_url(self) -> str | None:
@@ -98,18 +96,12 @@ class ChessEventTournamentImporter(TournamentImporter):
         """Executed when a SharlyChessException is raised."""
 
     def _resolve_request_data(self, event: Event) -> ChessEventTournamentRequestData:
-        event_id, user_id, password, tournament_name = self.get_option_values()
+        event_id, tournament_name = self.get_option_values()
         event_plugin_data = ChessEventUtils.get_event_plugin_data(event)
-        if not user_id:
-            user_id = event_plugin_data.user
-        if not password:
-            password = event_plugin_data.password
         if not event_id:
             event_id = event_plugin_data.event_id
         return ChessEventTournamentRequestData(
             event_id=event_id,
-            user_id=user_id,
-            password=password,
             tournament_name=tournament_name,
         )
 
@@ -141,16 +133,10 @@ class ChessEventTournamentImporter(TournamentImporter):
     ):
         assert event is not None
         (
-            user_option,
-            password_option,
             event_option,
             tournament_option,
         ) = self.options
         plugin_data = ChessEventUtils.get_event_plugin_data(event)
-        if not user_option.value and not plugin_data.user:
-            raise OptionError(_('A value is expected.'), user_option)
-        if not password_option.value and not plugin_data.password:
-            raise OptionError(_('A value is expected.'), password_option)
         if not event_option.value and not plugin_data.event_id:
             raise OptionError(_('A value is expected.'), event_option)
         if not tournament_option.value:
@@ -180,8 +166,6 @@ class ChessEventTournamentImporter(TournamentImporter):
             tournament, stored_tournament
         )
         stored_tournament.plugin_data[PLUGIN_NAME] = ChessEventTournamentPluginData(
-            user=request_data.user_id,
-            password=request_data.password,
             event_id=request_data.event_id,
             tournament_name=request_data.tournament_name,
             status=SuccessChessEventStatus().id,

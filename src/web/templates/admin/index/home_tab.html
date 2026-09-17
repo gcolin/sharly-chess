@@ -49,8 +49,11 @@
         </div>
         {% if client.can_manage_events %}
                 {% with button_class='btn-lg' %}
-            <div class="text-center my-3">
+            <div class="text-center my-3 d-flex flex-column gap-2 align-items-center">
                     {% include 'create_event_button.html' %}
+                    {% with admin_tab='home' %}
+                        {% include '/ticketchess_import_event_button.html' %}
+                    {% endwith %}
                 {% endwith %}
             </div>
         {% endif %}
