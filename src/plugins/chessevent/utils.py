@@ -29,6 +29,17 @@ from web.controllers.base_controller import WebContext
 
 get_data = partial(PluginUtils.get_plugin_data, PLUGIN_NAME)
 
+DEFAULT_CHESS_EVENT_SERVER_URL = 'https://chessevent.echecs-bretagne.fr'
+DEFAULT_TICKETCHESS_BASE_URL = 'https://tournois.tregorechecs.fr/'
+
+
+def resolve_download_url(server_url: str | None) -> str:
+    """Build the ChessEvent download endpoint from a server or API base URL."""
+    base = (server_url or DEFAULT_CHESS_EVENT_SERVER_URL).strip().rstrip('/')
+    if base.endswith('/download'):
+        return base
+    return f'{base}/download'
+
 
 class ChessEventUtils:
     @classmethod
@@ -59,6 +70,15 @@ class ChessEventUtils:
     def resolve_tournament_name(cls, tournament: Tournament) -> str | None:
         tournament_plugin_data = cls.get_tournament_plugin_data(tournament)
         return tournament_plugin_data.tournament_name
+
+    @classmethod
+    def resolve_server_url(cls, event: Event) -> str:
+        event_plugin_data = cls.get_event_plugin_data(event)
+        return event_plugin_data.server_url or DEFAULT_CHESS_EVENT_SERVER_URL
+
+    @classmethod
+    def resolve_download_url(cls, event: Event) -> str:
+        return resolve_download_url(cls.resolve_server_url(event))
 
     @classmethod
     def resolve_tournament_status(cls, tournament: Tournament) -> ChessEventStatus:
@@ -112,10 +132,57 @@ class _ChessEventRequestStatusManager(EntityManager[ChessEventStatus]):
 
 
 @dataclass
+class ChessEventConfigPluginData(PluginData):
+    """Global ChessEvent plugin settings (app-level)."""
+
+    ticketchess_base_url: str | None = None
+
+    @classmethod
+    def from_stored_value(cls, stored_value: dict[str, Any]) -> Self:
+        return cls(
+            ticketchess_base_url=stored_value.get('ticketchess_base_url'),
+        )
+
+    def to_stored_value(self) -> dict[str, Any]:
+        return {
+            'ticketchess_base_url': self.ticketchess_base_url,
+        }
+
+    @classmethod
+    def from_form_data(
+        cls,
+        data: dict[str, str],
+        previous_object: Self | None = None,
+        action: str | None = None,
+    ) -> Self:
+        return cls(
+            ticketchess_base_url=WebContext.form_data_to_str(
+                data, 'ticketchess_base_url'
+            ),
+        )
+
+    def to_form_data(self, action: str | None = None) -> dict[str, str]:
+        return WebContext.values_dict_to_form_data(
+            {
+                'ticketchess_base_url': (
+                    self.ticketchess_base_url or DEFAULT_TICKETCHESS_BASE_URL
+                ),
+            }
+        )
+
+    @property
+    def resolved_ticketchess_base_url(self) -> str:
+        return (self.ticketchess_base_url or DEFAULT_TICKETCHESS_BASE_URL).rstrip(
+            '/'
+        ) + '/'
+
+
+@dataclass
 class ChessEventEventPluginData(PluginData):
     user: str | None = None
     password: str | None = None
     event_id: str | None = None
+    server_url: str | None = None
 
     @classmethod
     def from_stored_value(cls, stored_value: dict[str, Any]) -> Self:
@@ -123,6 +190,7 @@ class ChessEventEventPluginData(PluginData):
             user=stored_value.get('user'),
             password=stored_value.get('password'),
             event_id=stored_value.get('event_id'),
+            server_url=stored_value.get('server_url'),
         )
 
     def to_stored_value(self) -> dict[str, Any]:
@@ -130,6 +198,7 @@ class ChessEventEventPluginData(PluginData):
             'user': self.user,
             'password': self.password,
             'event_id': self.event_id,
+            'server_url': self.server_url,
         }
 
     @classmethod
@@ -143,6 +212,8 @@ class ChessEventEventPluginData(PluginData):
             user=WebContext.form_data_to_str(data, 'chessevent_user'),
             password=WebContext.form_data_to_str(data, 'chessevent_password'),
             event_id=WebContext.form_data_to_str(data, 'chessevent_event_id'),
+            server_url=WebContext.form_data_to_str(data, 'chessevent_server_url')
+            or None,
         )
 
     def to_form_data(self, action: str | None = None) -> dict[str, str]:
@@ -151,6 +222,11 @@ class ChessEventEventPluginData(PluginData):
                 'chessevent_user': self.user if action != 'clone' else '',
                 'chessevent_password': self.password if action != 'clone' else '',
                 'chessevent_event_id': self.event_id if action != 'clone' else '',
+                'chessevent_server_url': (
+                    self.server_url or DEFAULT_CHESS_EVENT_SERVER_URL
+                    if action != 'clone'
+                    else DEFAULT_CHESS_EVENT_SERVER_URL
+                ),
             }
         )
 

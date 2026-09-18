@@ -2,9 +2,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from copy import copy
 from datetime import date
+from logging import Logger
+import time
 
 from common.exception import ImporterError, OptionError
 from common.i18n import _
+from common.logger import get_logger
 from data.event import Event
 from data.input_output.tournament_importer_options import (
     TournamentImporterOption,
@@ -27,6 +30,8 @@ from utils.date_time import format_date
 from utils.enum import EventType, Result, TeamByeType
 from utils.option import OptionHandler
 import contextlib
+
+logger: Logger = get_logger()
 
 
 class TournamentImporter(OptionHandler[TournamentImporterOption], ABC):
@@ -205,15 +210,28 @@ class TournamentImporter(OptionHandler[TournamentImporterOption], ABC):
         If tournament is provided, update this tournament, otherwise create a new one.
         Returns the ID of the tournament.
         Raises if the tournament already has players."""
+        load_started = time.perf_counter()
         existing_stored_tournament: StoredTournament | None = None
         if tournament:
             existing_stored_tournament = copy(tournament.stored_tournament)
             existing_stored_tournament.stored_tournament_players = []
+        source_started = time.perf_counter()
         stored_tournament, stored_players = self.load_stored_tournament(
             event, existing_stored_tournament
         )
+        logger.info(
+            'Import load_stored_tournament done in %.0f ms players=%d',
+            (time.perf_counter() - source_started) * 1000,
+            len(stored_players),
+        )
         self.check_players_unicity(stored_players)
+        check_started = time.perf_counter()
         self.check_pairing_inconsistencies(stored_tournament)
+        logger.info(
+            'Import check_pairing_inconsistencies done in %.0f ms',
+            (time.perf_counter() - check_started) * 1000,
+        )
+        write_started = time.perf_counter()
         with EventDatabase(event.uniq_id, True) as database:
             if tournament:
                 database.delete_players_in_tournament(tournament.id)
@@ -226,9 +244,25 @@ class TournamentImporter(OptionHandler[TournamentImporterOption], ABC):
             )
             if self.stored_event_modified:
                 database.update_stored_event(event.stored_event)
+        logger.info(
+            'Import SQLite write done in %.0f ms tournament_id=%d players=%d',
+            (time.perf_counter() - write_started) * 1000,
+            tournament_id,
+            len(stored_players),
+        )
+        reload_started = time.perf_counter()
         event = EventLoader().load_event(event.uniq_id)
+        logger.info(
+            'Import EventLoader.load_event done in %.0f ms',
+            (time.perf_counter() - reload_started) * 1000,
+        )
         tournament = event.tournaments_by_id[tournament_id]
+        pairing_started = time.perf_counter()
         tournament.set_tournament_players_pairing_numbers()
+        logger.info(
+            'Import set_tournament_players_pairing_numbers done in %.0f ms',
+            (time.perf_counter() - pairing_started) * 1000,
+        )
         if not self.check_in_imported:
             with EventDatabase(event.uniq_id, True) as database:
                 database.set_players_check_in(
@@ -236,7 +270,18 @@ class TournamentImporter(OptionHandler[TournamentImporterOption], ABC):
                     tournament.default_player_check_in,
                 )
         for task in self.post_import_task:
+            task_started = time.perf_counter()
             task(tournament)
+            logger.info(
+                'Import post_import_task [%s] done in %.0f ms',
+                getattr(task, '__name__', str(task)),
+                (time.perf_counter() - task_started) * 1000,
+            )
+        logger.info(
+            'Import load_tournament total %.0f ms tournament_id=%d',
+            (time.perf_counter() - load_started) * 1000,
+            tournament.id,
+        )
         return tournament.id
 
     def _write_stored_tournament(

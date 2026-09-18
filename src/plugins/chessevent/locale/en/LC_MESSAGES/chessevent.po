@@ -16,6 +16,12 @@ msgstr ""
 msgid "Authentication failed. Please check your credentials and try again."
 msgstr ""
 
+msgid "Base URL of your Ticketchess instance."
+msgstr ""
+
+msgid "Cancel"
+msgstr ""
+
 msgid "Check the event ID then try again."
 msgstr ""
 
@@ -26,6 +32,9 @@ msgid "Check the username and the password then try again."
 msgstr ""
 
 msgid "ChessEvent"
+msgstr ""
+
+msgid "ChessEvent API base URL. The /download endpoint is appended automatically unless already present."
 msgstr ""
 
 msgid "ChessEvent actions are no longer available once the tournament has started."
@@ -44,6 +53,9 @@ msgid "ChessEvent password not defined."
 msgstr ""
 
 msgid "ChessEvent password:"
+msgstr ""
+
+msgid "ChessEvent server URL:"
 msgstr ""
 
 msgid "ChessEvent tournament"
@@ -91,6 +103,14 @@ msgstr ""
 msgid "Event [{event_id}] does not exist."
 msgstr ""
 
+#, python-brace-format
+msgid "Event [{uniq_id}] created. {summary}"
+msgstr ""
+
+#, python-brace-format
+msgid "Event [{uniq_id}] imported from Ticketchess. {summary}"
+msgstr ""
+
 msgid "Event not found"
 msgstr ""
 
@@ -99,6 +119,9 @@ msgid "Federation [{federation}] of player [{player}] is unknown. Recreate it in
 msgstr ""
 
 msgid "I confirm that I have read and acknowledged the warning"
+msgstr ""
+
+msgid "Import a Ticketchess event"
 msgstr ""
 
 msgid "Import from ChessEvent"
@@ -110,10 +133,26 @@ msgstr ""
 msgid "Never synchronized"
 msgstr ""
 
+#, python-brace-format
+msgid "No tournament found for Ticketchess event [{event_id}]."
+msgstr ""
+
 msgid "Not configured"
 msgstr ""
 
+msgid "Open Ticketchess"
+msgstr ""
+
+msgid "Open Ticketchess to choose an event with open registrations. All tournaments will be imported automatically."
+msgstr ""
+
 msgid "Please enter a password for the ChessEvent connection."
+msgstr ""
+
+msgid "Please enter a valid ChessEvent server URL (http:// or https://)."
+msgstr ""
+
+msgid "Please enter a valid Ticketchess URL (http:// or https://)."
 msgstr ""
 
 msgid "Public page of the tournament."
@@ -131,7 +170,7 @@ msgstr ""
 msgid "Success"
 msgstr ""
 
-msgid "Support for the ChessEvent platform used for organising tournaments in France."
+msgid "Support for the ChessEvent platform used for organising tournaments in France, and Ticketchess whole-event import."
 msgstr ""
 
 #, python-brace-format
@@ -157,7 +196,21 @@ msgstr ""
 msgid "The event [{event_id}] is not accessible to the user [{user_id}]."
 msgstr ""
 
+#, python-brace-format
+msgid "The event [{event_id}] is not accessible with this token."
+msgstr ""
+
 msgid "The username / password provided are not allowed to access this ChessEvent event."
+msgstr ""
+
+msgid "Ticketchess URL"
+msgstr ""
+
+msgid "Ticketchess import failed: missing token or event id."
+msgstr ""
+
+#, python-brace-format
+msgid "Ticketchess import failed: {error}"
 msgstr ""
 
 msgid "Tournament"
@@ -202,8 +255,20 @@ msgid "my_password"
 msgstr ""
 
 #, python-brace-format
+msgid "{count} tournament failed"
+msgid_plural "{count} tournaments failed"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
 msgid "{count} tournament ignored"
 msgid_plural "{count} tournaments ignored"
+msgstr[0] ""
+msgstr[1] ""
+
+#, python-brace-format
+msgid "{count} tournament imported"
+msgid_plural "{count} tournaments imported"
 msgstr[0] ""
 msgstr[1] ""
 

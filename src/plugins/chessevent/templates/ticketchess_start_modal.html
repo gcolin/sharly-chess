@@ -1,0 +1,56 @@
+{% import '/admin/common/macros.j2' as admin_macros with context %}
+<div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">
+                {{ _('Import a Ticketchess event') }}
+            </h2>
+            <button
+                type="button"
+                class="btn-close"
+                data-bs-dismiss="modal"
+                aria-label="{{ _('Close') }}"
+            ></button>
+        </div>
+        <div class="modal-body">
+            <p>
+                {{ _('Open Ticketchess to choose an event with open registrations. All tournaments will be imported automatically.') }}
+            </p>
+            <form
+                id="ticketchess-start-form"
+                hx-post="{{ url_for('ticketchess-start') }}"
+                hx-target="#modal-wrapper"
+                hx-swap="innerHTML"
+                hx-indicator="#please-wait"
+            >
+                <input type="hidden" name="admin_tab" value="{{ admin_tab }}"/>
+                {% set data = {'ticketchess_base_url': ticketchess_base_url} %}
+                {{ admin_macros.text_input(
+                    name='ticketchess_base_url',
+                    label=_('Ticketchess URL'),
+                    placeholder=_('E.g.: %(string)s', string='https://tournois.tregorechecs.fr/'),
+                    help_text=_('Base URL of your Ticketchess instance.'),
+                    data=data,
+                    errors=errors
+                ) }}
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button
+                type="button"
+                class="btn btn-secondary"
+                data-bs-dismiss="modal"
+            >
+                {{ _('Cancel') }}
+            </button>
+            <button
+                type="submit"
+                form="ticketchess-start-form"
+                class="btn btn-primary"
+            >
+                <i class="bi-box-arrow-up-right pe-1"></i>
+                {{ _('Open Ticketchess') }}
+            </button>
+        </div>
+    </div>
+</div>

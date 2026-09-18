@@ -11,6 +11,16 @@
             data=data, errors=errors
         ) }}
     </div>
+    <div class="col-12">
+        {{ admin_macros.text_input(
+            name='chessevent_server_url',
+            label=_('ChessEvent server URL:'),
+            placeholder=_('E.g.: %(string)s', string='https://chessevent.echecs-bretagne.fr'),
+            help_text=_('ChessEvent API base URL. The /download endpoint is appended automatically unless already present.'),
+            disabled=not client.can_update_event,
+            data=data, errors=errors
+        ) }}
+    </div>
     <div class="col-12 col-md-6">
         {{ admin_macros.text_input(
             name='chessevent_user',

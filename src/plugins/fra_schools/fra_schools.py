@@ -61,6 +61,7 @@ from plugins.fra_schools.fra_schools_ranking_document import (
 from plugins.fra_schools.utils import (
     FRASchoolsPlayerPluginData,
     FRASchoolsUtils,
+    FRASchoolsImportLookup,
     FRASchoolsEventPluginData,
     FRASchool,
 )
@@ -504,7 +505,7 @@ class FRASchoolsPlugin(Plugin):
     ) -> None:
         school_id: int | None = None
         ce_school = chessevent_player.school
-        if ce_school and FRASchoolsDatabase.file_path().exists():
+        if ce_school:
             school_code = FRASchoolsUtils.extract_school_code(ce_school)
             if not school_code:
                 logger.warning(
@@ -515,26 +516,15 @@ class FRASchoolsPlugin(Plugin):
                     chessevent_player.school,
                 )
             else:
-                fra_schools = FRASchoolsUtils.get_event_plugin_data(event).fra_schools
-                school_id = next(
-                    (s.id for s in fra_schools if s.code == school_code),
-                    None,
+                school_id = FRASchoolsImportLookup.for_importer(
+                    importer
+                ).resolve_school_id(
+                    event,
+                    importer,
+                    school_code,
+                    last_name=stored_player.last_name,
+                    first_name=stored_player.first_name or '',
                 )
-                if not school_id:
-                    with FRASchoolsDatabase() as database:
-                        school = database.get_school_by_code(school_code)
-                    if not school:
-                        logger.warning(
-                            'Player [%s %s] - No school found for code [%s] (ignored).',
-                            stored_player.last_name,
-                            stored_player.first_name,
-                            school_code,
-                        )
-                    else:
-                        importer.stored_event_modified = True
-                        school_id = FRASchoolsUtils.add_event_school(
-                            event, school, save=False
-                        )
         stored_player.plugin_data[PLUGIN_NAME] = FRASchoolsPlayerPluginData(
             school_id
         ).to_stored_value()
@@ -550,26 +540,15 @@ class FRASchoolsPlugin(Plugin):
         if stored_player.club:
             school_code = FRASchoolsUtils.extract_school_code(stored_player.club)
             if school_code:
-                fra_schools = FRASchoolsUtils.get_event_plugin_data(event).fra_schools
-                school_id = next(
-                    (s.id for s in fra_schools if s.code == school_code),
-                    None,
+                school_id = FRASchoolsImportLookup.for_importer(
+                    importer
+                ).resolve_school_id(
+                    event,
+                    importer,
+                    school_code,
+                    last_name=stored_player.last_name,
+                    first_name=stored_player.first_name or '',
                 )
-                if not school_id:
-                    with FRASchoolsDatabase() as database:
-                        school = database.get_school_by_code(school_code)
-                    if not school:
-                        logger.warning(
-                            'Player [%s %s] - No school found for code [%s] (ignored).',
-                            stored_player.last_name,
-                            stored_player.first_name,
-                            school_code,
-                        )
-                    else:
-                        importer.stored_event_modified = True
-                        school_id = FRASchoolsUtils.add_event_school(
-                            event, school, save=False
-                        )
         if school_id:
             stored_player.club = None
         stored_player.plugin_data[PLUGIN_NAME] = FRASchoolsPlayerPluginData(

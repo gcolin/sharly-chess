@@ -535,7 +535,7 @@ class SharlyChessConfig(metaclass=Singleton):
 
     # The federation used when the application runs without its window, where
     # the federation is chosen otherwise.
-    default_federation: str = 'FID'
+    default_federation: str = 'FRA'
 
     @property
     def federations(self) -> dict[str, str]:

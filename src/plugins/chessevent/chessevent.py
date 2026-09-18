@@ -15,9 +15,11 @@ from database.sqlite.event.event_store import (
 )
 from plugins.chessevent import migrations, PLUGIN_NAME
 from plugins.chessevent.chessevent_controller import ChessEventController
+from plugins.chessevent.ticketchess_controller import TicketchessController
 from plugins.chessevent.tournament_importer.data import ChessEventPlayer
 from plugins.chessevent.tournament_importer.importer import ChessEventTournamentImporter
 from plugins.chessevent.utils import (
+    ChessEventConfigPluginData,
     ChessEventEventPluginData,
     ChessEventTournamentPluginData,
     ChessEventUtils,
@@ -52,7 +54,9 @@ class ChessEventPluginHooks:
         """Augment player data when fetched from ChessEvent."""
 
 
-class ChessEventPlugin(Plugin):
+class ChessEventPlugin(Plugin[ChessEventConfigPluginData]):
+    data_class = ChessEventConfigPluginData
+
     @staticmethod
     def static_id() -> str:
         return PLUGIN_NAME
@@ -73,7 +77,8 @@ class ChessEventPlugin(Plugin):
     def description(self) -> str:
         return _(
             'Support for the ChessEvent platform used '
-            'for organising tournaments in France.'
+            'for organising tournaments in France, '
+            'and Ticketchess whole-event import.'
         )
 
     @property
@@ -141,7 +146,11 @@ class ChessEventPlugin(Plugin):
 
     @property
     def controllers(self) -> list[type[BaseController]]:
-        return [ChessEventController]
+        return [ChessEventController, TicketchessController]
+
+    @hookimpl
+    def create_event_button_template(self) -> str:
+        return '/ticketchess_import_event_button.html'
 
     # ---------------------------------------------------------------------------------
     # Input-Output
@@ -197,6 +206,16 @@ class ChessEventPlugin(Plugin):
         )
         if chessevent_user_id and not chessevent_password:
             errors[field] = _('Please enter a password for the ChessEvent connection.')
+
+        chessevent_server_url = WebContext.form_data_to_str(
+            data, field := 'chessevent_server_url'
+        )
+        if chessevent_server_url and not chessevent_server_url.startswith(
+            ('http://', 'https://')
+        ):
+            errors[field] = _(
+                'Please enter a valid ChessEvent server URL (http:// or https://).'
+            )
 
     # ---------------------------------------------------------------------------------
     # Tournaments

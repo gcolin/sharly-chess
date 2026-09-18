@@ -2,6 +2,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from abc import ABC
 from argparse import ArgumentParser, Namespace
 from logging import Logger
@@ -121,6 +122,16 @@ class ProjectBuilder(ABC):  # noqa: B024
     def hook_post_clean_on_startup(self):
         """Runs at the end of `clean_on_startup`"""
 
+    @staticmethod
+    def _pip_licenses_command() -> list[str]:
+        """Return the pip-licenses CLI, preferring the active venv Scripts entry."""
+        scripts_dir = Path(sys.executable).parent
+        for name in ('pip-licenses.exe', 'pip-licenses'):
+            candidate = scripts_dir / name
+            if candidate.is_file():
+                return [str(candidate)]
+        return ['pip-licenses']
+
     @property
     def hook_get_venv_lib_path(
         self,
@@ -165,10 +176,11 @@ class ProjectBuilder(ABC):  # noqa: B024
 
         # 1. --- Generate third-party license files using pip-licenses ---
 
-        # Verify pip-licenses is available
+        # Verify pip-licenses is available (prefer the venv Scripts entry point)
+        pip_licenses_cmd = self._pip_licenses_command()
         try:
             subprocess.run(
-                ['pip-licenses', '--version'], capture_output=True, check=True
+                pip_licenses_cmd + ['--version'], capture_output=True, check=True
             )
         except (subprocess.CalledProcessError, FileNotFoundError):
             logger.error(
@@ -194,8 +206,8 @@ class ProjectBuilder(ABC):  # noqa: B024
             # First get package information as JSON to create individual files
             logger.info('Getting package information for individual license files...')
             result = subprocess.run(
-                [
-                    'pip-licenses',
+                pip_licenses_cmd
+                + [
                     '--format=json',
                     '--with-license-file',
                     '--ignore-packages',

@@ -24,8 +24,12 @@ class WinProjectBuilder(ProjectBuilder):
             # devel
             return Path(os.environ['VIRTUAL_ENV'])
         except KeyError:
-            # GitHub
-            return Path(sys.executable).parent
+            # Running via …/Scripts/python.exe (GitHub or local without VIRTUAL_ENV)
+            exe_dir = Path(sys.executable).parent
+            venv_root = exe_dir.parent
+            if (venv_root / 'Lib' / 'site-packages').is_dir():
+                return venv_root
+            return exe_dir
 
     @property
     def hook_get_venv_lib_path(

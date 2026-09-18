@@ -533,9 +533,8 @@ class IndexAdminController(BaseAdminController):
             name = EventLoader.get(request).get_unused_event_name(_('New event'))
             uniq_id = EventLoader.get(request).get_unused_event_uniq_id(_('event'))
             public = False
-            config = SharlyChessConfig()
             allow_multi_tournament_players = True
-            federation = config.federation.name if config.federation else ''
+            federation = SharlyChessConfig.default_federation
             player_rating_type = PlayerRatingType.FIDE.value
             event_type = EventType.INDIVIDUAL.value
             location: str | None = None

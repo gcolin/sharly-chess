@@ -1,5 +1,8 @@
-from dataclasses import dataclass, asdict
+import json
+import time
+from dataclasses import dataclass, field
 from logging import Logger
+from urllib.parse import urlparse, urlunparse
 
 from requests import Session, Response
 from requests.exceptions import RequestException
@@ -22,45 +25,150 @@ logger: Logger = get_logger()
 @dataclass
 class ChessEventTournamentRequestData:
     event_id: str
-    user_id: str
-    password: str
-    tournament_name: str
+    tournament_name: str = ''
+    user_id: str | None = None
+    password: str | None = field(default=None, repr=False)
+    bearer_token: str | None = field(default=None, repr=False)
 
 
 class ChessEventSession(Session):
     """A Requests session specialised for communication with
-    the ChessEvent platform."""
+    the ChessEvent platform (user/password) or Ticketchess (JWT Bearer)."""
 
     DOWNLOAD_URL: str = 'https://chessevent.echecs-bretagne.fr/download'
+
+    def __init__(self, download_url: str | None = None):
+        super().__init__()
+        self.download_url = (download_url or self.DOWNLOAD_URL).rstrip('/')
+
+    @property
+    def tournaments_url(self) -> str:
+        """URL of the tournaments list endpoint."""
+        if self.download_url.endswith('/download'):
+            return self.download_url[: -len('/download')] + '/tournaments'
+        return f'{self.download_url}/tournaments'
+
+    @staticmethod
+    def api_base_url(server_url: str) -> str:
+        """Normalize a ChessEvent/Ticketchess API base URL (…/chessevent)."""
+        base = server_url.strip().rstrip('/')
+        if base.endswith('/download'):
+            base = base[: -len('/download')]
+        return base
+
+    def list_tournaments(
+        self,
+        event_id: str,
+        bearer_token: str | None = None,
+    ) -> list[str]:
+        """Lists tournament names for a ChessEvent event_id."""
+        post = {'event_id': event_id}
+        logger.debug('Listing tournaments from ChessEvent (%s)...', event_id)
+        data = self._post_json(self.tournaments_url, post, bearer_token, event_id)
+        tournaments = data.get('tournaments') if isinstance(data, dict) else data
+        if not isinstance(tournaments, list):
+            raise SharlyChessException(f'Unexpected tournaments response: {data!r}')
+        return [str(name) for name in tournaments]
 
     def read_tournament_data(
         self, request_data: ChessEventTournamentRequestData
     ) -> str:
         """Reads the data of a ChessEvent tournament."""
         event_id = request_data.event_id
-        user_id = request_data.user_id
         tournament_name = request_data.tournament_name
-        post = asdict(request_data)
-        logger.debug(
-            'Reading data from the ChessEvent platform (%s)...',
-            f'{user_id}:{"*" * 8}@{event_id}/[{tournament_name}]',
+        post: dict[str, str] = {
+            'event_id': event_id,
+            'tournament_name': tournament_name,
+        }
+        if request_data.bearer_token is None:
+            if request_data.user_id is None or request_data.password is None:
+                raise SharlyChessException(
+                    'ChessEvent request is missing user/password or bearer token.'
+                )
+            post['user_id'] = request_data.user_id
+            post['password'] = request_data.password
+            logger.debug(
+                'Reading data from the ChessEvent platform (%s)...',
+                f'{request_data.user_id}:{"*" * 8}@{event_id}/[{tournament_name}]',
+            )
+        else:
+            logger.debug(
+                'Reading data from the ChessEvent platform (%s)...',
+                f'{event_id}/[{tournament_name}]',
+            )
+        return self._post_raw(
+            self.download_url, post, request_data.bearer_token, event_id
         )
+
+    def _post_json(
+        self,
+        url: str,
+        post: dict[str, str],
+        bearer_token: str | None,
+        event_id: str,
+    ) -> dict | list:
+        raw = self._post_raw(url, post, bearer_token, event_id)
+        try:
+            return json.loads(raw)
+        except json.JSONDecodeError as error:
+            raise SharlyChessException(
+                f'Invalid JSON from ChessEvent [{url}]: {error}'
+            ) from error
+
+    def _post_raw(
+        self,
+        url: str,
+        post: dict[str, str],
+        bearer_token: str | None,
+        event_id: str,
+    ) -> str:
+        headers = {}
+        if bearer_token:
+            headers['Authorization'] = f'Bearer {bearer_token}'
+        tournament_name = post.get('tournament_name', '')
+        label = (
+            f'{event_id}/[{tournament_name}]' if tournament_name else f'{event_id}'
+        )
+        logger.info(
+            'ChessEvent HTTP POST start url=[%s] event=[%s]',
+            url,
+            label,
+        )
+        started = time.perf_counter()
         try:
             # Redirections are handled manually to pass the data at each redirection
             response: Response = self.post(
-                self.DOWNLOAD_URL, data=post, allow_redirects=False
+                url, data=post, headers=headers, allow_redirects=False
             )
             while response.status_code in [301, 302]:
                 redirect_url = response.headers['location']
                 logger.debug('Redirection to  %s...', redirect_url)
-                response = self.post(redirect_url, data=post, allow_redirects=False)
+                response = self.post(
+                    redirect_url, data=post, headers=headers, allow_redirects=False
+                )
         except RequestException as ex:
-            logger.exception('Failed to read [%s]: %s.', self.DOWNLOAD_URL, ex)
+            elapsed_ms = (time.perf_counter() - started) * 1000
+            logger.error(
+                'ChessEvent HTTP POST failed after %.0f ms url=[%s] event=[%s]: %s',
+                elapsed_ms,
+                url,
+                label,
+                ex,
+            )
             raise ChessEventStatusError(
                 _('Connection to the ChessEvent server failed.'),
                 ConnectionErrorChessEventStatus(),
             ) from ex
+        elapsed_ms = (time.perf_counter() - started) * 1000
         data: str = response.content.decode()
+        logger.info(
+            'ChessEvent HTTP POST done in %.0f ms status=%d bytes=%d url=[%s] event=[%s]',
+            elapsed_ms,
+            response.status_code,
+            len(response.content),
+            url,
+            label,
+        )
         if response.status_code == 200:
             return data
         logger.error(
@@ -77,6 +185,14 @@ class ChessEventSession(Session):
                     AuthErrorChessEventStatus(),
                 )
             case 403:
+                if bearer_token:
+                    raise ChessEventStatusError(
+                        _(
+                            'The event [{event_id}] is not accessible with this token.'
+                        ).format(event_id=event_id),
+                        UnauthorizedErrorChessEventStatus(),
+                    )
+                user_id = post.get('user_id', '')
                 raise ChessEventStatusError(
                     _(
                         'The event [{event_id}] is not accessible to the user [{user_id}].'
@@ -108,3 +224,16 @@ class ChessEventSession(Session):
                 raise SharlyChessException(
                     f'Unknown response code: [{response.status_code}].'
                 )
+
+
+def ticketchess_chessevent_url(ticketchess_base_url: str) -> str:
+    """Build the ChessEvent API base URL from a Ticketchess origin."""
+    base = ticketchess_base_url.strip().rstrip('/')
+    parsed = urlparse(base)
+    path = (parsed.path or '').rstrip('/')
+    if path.endswith('/chessevent'):
+        return urlunparse(parsed._replace(path=path, params='', query='', fragment=''))
+    new_path = f'{path}/chessevent' if path else '/chessevent'
+    return urlunparse(
+        parsed._replace(path=new_path, params='', query='', fragment='')
+    )

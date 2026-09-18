@@ -64,7 +64,6 @@ from database.sqlite.event.event_database import EventDatabase
 from database.sqlite.event.event_store import (
     StoredTieBreak,
     StoredTournament,
-    StoredScreen,
     StoredPairing,
     StoredPrizeGroup,
     StoredPrizeCategory,
@@ -84,7 +83,10 @@ from utils.enum import (
     TeamColourType,
     TournamentRating,
 )
-from data.screens.manager import ScreenTypeManager
+from data.screens.defaults import (
+    SIMPLE_TOURNAMENT_SCREEN_TYPE_IDS,
+    create_tournament_screens,
+)
 from web.controllers.admin.base_event_admin_controller import (
     BaseEventAdminWebContext,
     BaseEventAdminController,
@@ -1514,46 +1516,21 @@ class TournamentAdminController(BaseEventAdminController):
                                     )
                                 )
                 self._apply_rule_set_tie_breaks(database, event, stored_tournament)
+                # Always create the simple results-entry and alphabetical
+                # pairings screens; optionally create the full default set.
                 if 'add_screens' in data:
-                    timer_id: int | None = None
-                    if len(event.timers_by_id) == 1:
-                        timer_id = next(iter(event.timers_by_id.keys()))
-                    for screen_type in ScreenTypeManager(event).objects():
-                        # Default screens are the per-tournament (set-based)
-                        # types available for the event.
-                        if not screen_type.has_screen_sets:
-                            continue
-                        if not screen_type.supports_event_type(event.event_type):
-                            continue
-                        type_fields = screen_type.create_form_data(event)
-                        columns = type_fields.pop('columns', 1)
-                        stored_screen: StoredScreen = database.add_stored_screen(
-                            StoredScreen(
-                                id=None,
-                                uniq_id=event.get_unused_screen_uniq_id(
-                                    base_uniq_id=Utils.name_to_uniq_id(
-                                        f'{tournament.name}-{screen_type.value}'
-                                    )
-                                ),
-                                type=screen_type.value,
-                                public=True,
-                                name=f'{screen_type.name} ({tournament.name})',
-                                columns=columns,
-                                font_size=None,
-                                menu_text=None,
-                                timer_id=timer_id,
-                                message_default=True,
-                                message_text=None,
-                                **type_fields,
-                            )
-                        )
-                        assert stored_screen.id is not None
-                        database.add_stored_screen_set(stored_screen.id, tournament.id)
+                    create_tournament_screens(database, event, tournament)
                     success_message = _(
                         'Tournament [{tournament}] has been created '
                         'and default screens have been added.'
                     ).format(tournament=tournament.name)
                 else:
+                    create_tournament_screens(
+                        database,
+                        event,
+                        tournament,
+                        SIMPLE_TOURNAMENT_SCREEN_TYPE_IDS,
+                    )
                     success_message = _(
                         'Tournament [{tournament}] has been created.'
                     ).format(tournament=tournament.name)

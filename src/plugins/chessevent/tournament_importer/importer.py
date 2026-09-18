@@ -1,4 +1,5 @@
 import json
+import time
 import zoneinfo
 from datetime import datetime, timedelta
 
@@ -12,6 +13,7 @@ from common.exception import (
     ImporterError,
 )
 from common.i18n import _
+from common.logger import get_logger
 from common.sharly_chess_config import SharlyChessConfig
 from data.event import Event
 from data.input_output import TournamentImporter
@@ -55,6 +57,8 @@ from plugins.chessevent.utils import ChessEventTournamentPluginData, ChessEventU
 from plugins.ffe.utils import FfePlayerPluginData, FFE_LEAGUES
 from plugins.manager import plugin_manager
 from utils.enum import TournamentRating, Result
+
+logger = get_logger()
 
 paris_tz = zoneinfo.ZoneInfo('Europe/Paris')
 epoch = datetime(1970, 1, 1, tzinfo=zoneinfo.ZoneInfo('UTC'))
@@ -127,8 +131,11 @@ class ChessEventTournamentImporter(TournamentImporter):
     @staticmethod
     def _get_chessevent_tournament(
         request_data: ChessEventTournamentRequestData,
+        download_url: str | None = None,
     ) -> ChessEventTournament:
-        chessevent_data = ChessEventSession().read_tournament_data(request_data)
+        chessevent_data = ChessEventSession(download_url).read_tournament_data(
+            request_data
+        )
         try:
             chessevent_tournament = dict_to_dataclass(
                 ChessEventTournament, json.loads(chessevent_data)
@@ -180,7 +187,16 @@ class ChessEventTournamentImporter(TournamentImporter):
         self, event: Event, stored_tournament: StoredTournament | None = None
     ) -> tuple[StoredTournament, list[StoredPlayer]]:
         request_data = self._resolve_request_data(event)
-        tournament = self._get_chessevent_tournament(request_data)
+        download_url = ChessEventUtils.resolve_download_url(event)
+        download_started = time.perf_counter()
+        tournament = self._get_chessevent_tournament(request_data, download_url)
+        logger.info(
+            'ChessEvent download+parse done in %.0f ms tournament=[%s] players=%d',
+            (time.perf_counter() - download_started) * 1000,
+            request_data.tournament_name,
+            len(tournament.players),
+        )
+        map_started = time.perf_counter()
         stored_tournament = self._read_chessevent_tournament(
             tournament, stored_tournament
         )
@@ -211,6 +227,12 @@ class ChessEventTournamentImporter(TournamentImporter):
             stored_players.append(stored_player)
             stored_tournament.stored_tournament_players.append(stored_tournament_player)
 
+        logger.info(
+            'ChessEvent map players/hooks done in %.0f ms tournament=[%s] players=%d',
+            (time.perf_counter() - map_started) * 1000,
+            request_data.tournament_name,
+            len(stored_players),
+        )
         return stored_tournament, stored_players
 
     @staticmethod
